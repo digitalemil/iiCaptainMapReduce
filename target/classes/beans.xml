@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:hdp="http://www.springframework.org/schema/hadoop" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd
+        http://www.springframework.org/schema/hadoop http://www.springframework.org/schema/hadoop/spring-hadoop.xsd">
+
+	<context:component-scan base-package="de.digitalemil" />
+
+	<hdp:configuration>
+		fs.default.name=hdfs://192.168.100.1:54310/
+		mapred.job.tracker=server0:54311
+	</hdp:configuration>
+
+	<hdp:file-system id="fs" uri="hdfs://192.168.100.1:54310/"
+		user="vfabric" />
+
+	<hdp:job id="locationsLastHour" jar="/iicaptain-mapreduce-0.0.1-SNAPSHOT.jar"
+		input-path="/user/vfabric/iicaptain-in"
+		output-path="/user/vfabric/locations-lastHour"
+		mapper="net.iicaptain.hadoop.LocationCount.Map" reducer="net.iicaptain.hadoop.LocationCount.Reduce"/>
+
+	<hdp:script id="init-script" language="javascript">
+		if(fsh.test("/user/vfabric/iicaptain-in")) {
+			fsh.rmr("/user/vfabric/iicaptain-in");
+			fsh.mkdir("/user/vfabric/iicaptain-in");
+		}
+		fsh.cp("/user/vfabric/iicaptain", "/user/vfabric/iicaptain-in");
+		if(fsh.test("/user/vfabric/locations-lastHour"))
+			fsh.rmr("/user/vfabric/locations-lastHour");
+	</hdp:script>
+	
+	<hdp:script id="post-script" language="javascript">
+		fsh.rmr("/user/vfabric/iicaptain-in");
+	</hdp:script>
+
+	<hdp:job-runner id="myjob-runner" pre-action="init-script" post-action="post-script"
+		job-ref="locationsLastHour" run-at-startup="true" />
+
+</beans>
